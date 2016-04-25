@@ -1,0 +1,155 @@
+<html>
+<head>
+  <meta charset=utf-8 />
+  <title>Visualizing time on a feature layer</title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300' rel='stylesheet' type='text/css'>
+  <!-- Latest compiled and minified CSS -->
+  <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
+
+  <!-- Optional theme -->
+  <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap-theme.min.css">
+  <link rel="stylesheet" href="bower_components/font-awesome/css/font-awesome.min.css">
+
+  <script src="bower_components/jquery/dist/jquery.min.js"></script>
+  <!-- Latest compiled and minified JavaScript -->
+  <script src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+  <script src="bower_components/jsrender/jsrender.min.js"></script>
+  <style>
+    #serviceUrl{width: 70%;}
+    #layerSpinner{
+      margin: .5em;
+      padding: 1rem;
+    }
+    .mt1{margin-top: 1rem;}
+    table{overflow-x: scroll; max-width: 100%}
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Data inspector</h1>
+  <div class="row">
+    <div class="col-md-12">
+      <form class="form-inline" id="serviceForm">
+        <label for="serviceUrl">Service URL:</label>
+        <input id="serviceUrl" class="form-control" type="text" value="http://services5.arcgis.com/rxCBpgBa51PYsQKB/ArcGIS/rest/services/meshlium_kits/FeatureServer">
+        <button type="submit" class="btn btn-default">Load</button>
+      </form>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-12">
+      <label for="layers">Layers:</label>
+      <select id="layers" class="form-control">
+      </select>
+    </div>
+
+    <div class="col-md-12">
+      <p class="text-center bg-warning" id="layerSpinner" style="display:none">Loading <i class="fa fa-spinner fa-spin"></i></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-12 mt1">
+      <p> There are <span id="nFeatures"></span> features in this layer.</p>    
+      <table class="table table-bordered table-striped">
+        <thead >
+          <tr id="thead"></tr>
+        </thead>
+        <tbody id="tbody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script id="featureTmpl"  type="text/x-jsrender">
+{{for layers}}
+<option val="{{:#index}}">{{:name}}</option>
+{{/for}}
+</script>
+
+<script id="headerTmpl"  type="text/x-jsrender">
+{{for fields}}
+    <th>{{:name}}</th>
+{{/for}}
+</script>
+
+<script id="bodyTmpl" type="text/x-jsrender">
+{{for features}}
+  <tr>
+  {{props attributes}}
+    <td>{{:prop}}</td>
+  {{/props}}
+  </tr>
+{{/for}}
+</script>
+
+<script>
+  $(document).ready(function(){
+
+
+    loadService($("#serviceUrl").val());
+    
+
+    $("#serviceForm").submit(function(e){
+      e.preventDefault();
+      loadService($("#serviceUrl").val());
+      return false;
+    });
+
+
+  });
+
+  function loadService(serviceUrl){
+    var layerT = $.templates("#featureTmpl");
+
+    $.getJSON(serviceUrl + "?f=json", function(feature){
+      console.log("feature=",feature);
+      feature.serviceUrl = serviceUrl;
+      var htmlEl = layerT.render(feature);
+        
+      $("#layers").html(htmlEl);
+
+      loadLayer(serviceUrl, 0)
+    });
+  }
+
+  function loadLayer(serviceUrl, index){
+    var template = $.templates("#headerTmpl");
+    var bodyT = $.templates("#bodyTmpl");
+
+    url = generateUrl(serviceUrl, index);
+
+    $("#layerSpinner").show();
+
+    $.getJSON(url, function(data){
+      x=data;
+      var asd=template.render(data);
+      var body=bodyT.render(data);
+      
+      $("#nFeatures").html(data.features.length)
+      //$("#data").html(asd);
+
+      $("#thead").html(asd);
+      $("#tbody").html(body);
+      $("#layerSpinner").hide();
+    });
+
+    $("#layers").change(function(){
+      loadLayer(serviceUrl,$(this).val());
+    });
+  }
+
+  function generateUrl(serviceURL,index){
+    return serviceURL + "/"+index+"/query?where=1%3D1&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&resultType=none&distance=&units=esriSRUnit_Meter&outFields=*&returnGeometry=true&multipatchOption=&maxAllowableOffset=&geometryPrecision=&outSR=&returnIdsOnly=false&returnCountOnly=false&returnExtentOnly=false&returnDistinctValues=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&resultOffset=&resultRecordCount=&returnZ=false&returnM=false&quantizationParameters=&f=pjson&token=";
+  }
+  
+</script>
+
+
+
+
+</body>
+</html>
