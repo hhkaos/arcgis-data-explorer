@@ -52,7 +52,7 @@
   </div>
   <div class="row">
     <div class="col-md-12 mt1">
-      <p> There are <span id="nFeatures"></span> features in this layer.</p>    
+      <p> There are <span id="nFeatures"></span> features in this layer (<a href="#" id="layer"></a>) and <span id="nLocations"></span> locations <button id="paint"class="btn btn-default">Show results</button>.</p>    
       <table class="table table-bordered table-striped">
         <thead >
           <tr id="thead"></tr>
@@ -88,7 +88,7 @@
 
 <script>
   $(document).ready(function(){
-
+    window.AGOL = {};
 
     loadService($("#serviceUrl").val());
     
@@ -116,6 +116,17 @@
     });
   }
 
+  function checkIfObjectExist(locations,x,y)
+  {
+  for(var i=0;i<locations.length;i++)
+   {
+    if(locations[i].x===x && locations[i].y===y)
+     {     
+        return true;
+     }
+   }    
+  }
+
   function loadLayer(serviceUrl, index){
     var template = $.templates("#headerTmpl");
     var bodyT = $.templates("#bodyTmpl");
@@ -125,17 +136,44 @@
     $("#layerSpinner").show();
 
     $.getJSON(url, function(data){
-      x=data;
-      var asd=template.render(data);
-      var body=bodyT.render(data);
+      window.AGOL.data = data;
       
-      $("#nFeatures").html(data.features.length)
+      
+      var nGeometries = data.features.length;
+      $("#nFeatures").html(nGeometries);
+
+      var locations = [],x,y;
+      for(var i = 0; i < nGeometries; i++){
+        //debugger
+        try{
+          x = data.features[i].geometry.x;
+          y = data.features[i].geometry.y;
+        }catch(e){
+          console.error("Error: "+e);
+        }
+        if(!checkIfObjectExist(locations, x, y)){
+          locations.push({x: x, y: y});
+          //console.log("Nueva: x="+x+",y="+y);
+        }
+      }
+      $("#nLocations").html(locations.length);
+      $("#layer").attr("href",url);
+      $("#layer").text($("#layers option:selected").val());
+
+
       //$("#data").html(asd);
+
+      
+      $("#layerSpinner").hide();
+    });
+
+    $("#paint").click(function(){
+      var asd=template.render(window.AGOL.data);
+      var body=bodyT.render(window.AGOL.data);
 
       $("#thead").html(asd);
       $("#tbody").html(body);
-      $("#layerSpinner").hide();
-    });
+    })
 
     $("#layers").change(function(){
       loadLayer(serviceUrl,$(this).val());
